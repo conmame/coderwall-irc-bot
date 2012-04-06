@@ -53,3 +53,7 @@ LICENCE
 AUTHOR
 ----
 con_mame con_mame@conma.me
+
+THANKS!
+----
+* slightair
