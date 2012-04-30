@@ -3,6 +3,7 @@ require 'net/irc'
 require 'yaml'
 require 'daemon_spawn'
 require 'coderwaller'
+require_relative '../lib/coderwall_team'
 
 class UserNotFoundException < Exception; end
 
@@ -11,6 +12,7 @@ class CoderwallIrcBot < Net::IRC::Client
 
   def initialize(host, port, opts={})
     @password = (opts[:password].nil?) ? '' : opts[:password]
+    @team_id = (opts[:team_id].nil?) ? '' : opts[:team_id]
     super
   end
 
@@ -30,6 +32,11 @@ class CoderwallIrcBot < Net::IRC::Client
         end
       when /^coderwall-d:\s*(\w+)/
         coderwall_user_detail_status($1) do |msg|
+          p.call(msg)
+        end
+      when /^coderwall-t[:]?\s*(\w*)/
+        tid = ($1.nil? || $1 == '') ? @team_id : $1
+        coderwall_team_status(tid) do |msg|
           p.call(msg)
         end
       end
@@ -56,6 +63,11 @@ class CoderwallIrcBot < Net::IRC::Client
     end
   end
 
+  def coderwall_team_status(team_id)
+    team_ranking = CoderwallTeam::get_team_rank(team_id)
+    yield team_ranking if block_given?
+  end
+
   def get_coderwall(user_name)
     user_achievement = CoderwallerApi.get_user_achievement(user_name)
     raise(UserNotFoundException, user_achievement[:msg]) unless user_achievement[:msg] == ''
@@ -70,20 +82,20 @@ class Cib < DaemonSpawn::Base
     log.level = Logger::ERROR
     server_config = YAML.load_file("../config/config.yaml")['server']
     client = CoderwallIrcBot.new(server_config['host'], server_config['port'],
-    {:nick => server_config['nick'], :user => server_config['user'], :real => server_config['real'],
-    :channel => server_config['channel'], :password => server_config['password'], :logger => log})
-    client.start
+      {:nick => server_config['nick'], :user => server_config['user'], :real => server_config['real'],
+      :channel => server_config['channel'], :password => server_config['password'], :team_id => server_config['coderwall_team_id'] , :logger => log})
+      client.start
+    end
+
+    def stop
+      puts "stop  : #{Time.now}"
+    end
   end
 
-  def stop
-    puts "stop  : #{Time.now}"
-  end
-end
-
-Cib.spawn!({
-  :working_dir => File.dirname(__FILE__),
-  :pid_file => File.expand_path(File.dirname(__FILE__) + '/../tmp/cib.pid'),
-  :log_file => File.expand_path(File.dirname(__FILE__) + '/../log/cib.log'),
-  :sync_log => true,
-  :singleton => true
-})
+  Cib.spawn!({
+    :working_dir => File.dirname(__FILE__),
+    :pid_file => File.expand_path(File.dirname(__FILE__) + '/../tmp/cib.pid'),
+    :log_file => File.expand_path(File.dirname(__FILE__) + '/../log/cib.log'),
+    :sync_log => true,
+    :singleton => true
+  })
