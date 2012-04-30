@@ -11,6 +11,7 @@ HOW TO USE
 ###irc commands
 * coderwall: USER_NAME - Get Coderwall badge.
 * coderwall-d: USER_NAME - Get Coderwall badge detail.
+* coderwall-t: TEAM_ID - Get Coderwall Team ranking. (Please set default team id at config file.)
 
 ###install gems
     #bundle install
@@ -28,6 +29,7 @@ or
       real:     coderwall_irc_bot
       channel:	'#hoge'
       password:  ''
+      coderwall_team_id: ''
       
 ###commands
 start `ruby bin/cib.rb start`  
